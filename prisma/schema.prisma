@@ -36,8 +36,9 @@ model User {
   initials  String
   createdAt DateTime @default(now())
 
-  dealsOwned Deal[] @relation("DealOwner")
-  tasks      Task[] @relation("TaskAssignee")
+  dealsOwned    Deal[]    @relation("DealOwner")
+  tasks         Task[]    @relation("TaskAssignee")
+  contactsOwned Contact[] @relation("ContactOwner")
 
   @@index([tenantId])
 }
@@ -60,19 +61,48 @@ model Stage {
 }
 
 model Contact {
-  id         String   @id @default(cuid())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
-  name       String
-  company    String?
-  role       String?
-  phone      String?
-  email      String?
-  /// Where this contact came from: "ידני", "LeadMeCMS", "CSV" ...
-  source     String   @default("ידני")
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  name     String
+  company  String?
+  role     String?
+  phone    String?
+  email    String?
+
+  // --- Business identity (needed once invoices are issued) ---
+  /// ח.פ. / ע.מ. — company or sole-trader registration number.
+  taxId   String?
+  address String?
+  city    String?
+  /// Billing address, kept separate because it often differs from the
+  /// site/office address the work actually happens at.
+  billingAddress String?
+  billingCity    String?
+
+  // --- Lead management ---
+  /// Where this contact came from: "אתר", "המלצה", "LeadMeCMS", "CSV" ...
+  source String @default("ידני")
+  /// חם / פושר / קר — see LEAD_TEMPERATURES.
+  temperature String?
+  /// סוג הליד — see LEAD_TYPES.
+  leadType    String?
+  /// סטטוס הליד עצמו (חדש / בטיפול / לא רלוונטי ...). Distinct from a
+  /// deal's pipeline stage: a contact can be "בטיפול" while holding
+  /// several deals sitting at different stages.
+  status String @default("חדש")
+  /// תאריך פניה — when the lead actually reached out, which is not
+  /// necessarily when the record was typed into the system.
+  inquiredAt DateTime?
+  /// תאריך העברה — when the lead was handed over to the owner below.
+  handedOverAt DateTime?
+  ownerId      String?
+  owner        User?     @relation("ContactOwner", fields: [ownerId], references: [id])
+
   /// ID in the source system, used to de-duplicate on re-import.
   externalId String?
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
   tags       Tag[]
   deals      Deal[]
@@ -80,6 +110,7 @@ model Contact {
   tasks      Task[]
 
   @@index([tenantId])
+  @@index([status])
 }
 
 model Tag {

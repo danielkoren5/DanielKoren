@@ -44,14 +44,23 @@ async function main() {
     prisma.tag.create({ data: { tenantId: tenant.id, name: "חד-פעמי", color: "teal" } }),
   ]);
 
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86400000);
+
   const contactsData = [
-    { name: "שירה אלמוג", company: "סטודיו נוי", role: "מנכ״לית", phone: "050-1234567", email: "shira@studio-noy.co.il", tags: [vip, retainer] },
-    { name: "יואב שגיא", company: "דלתא בע״מ", role: "סמנכ״ל תפעול", phone: "052-2345678", email: "yoav@delta.co.il", tags: [oneTime] },
-    { name: "אורית לנדאו", company: "קליניקת שיא", role: "בעלים", phone: "054-3456789", email: "orit@shia-clinic.co.il", tags: [retainer] },
-    { name: "נעם ברקאי", company: "בר יוגב עיצוב", role: "מייסד", phone: "053-4567890", email: "noam@bar-yogev.co.il", tags: [oneTime] },
-    { name: "דנה אלמוג ושות׳", company: "אלמוג ושות׳", role: "שותפה מנהלת", phone: "050-5678901", email: "dana@almog-law.co.il", tags: [vip, retainer] },
-    { name: "גיל גפן", company: "חברת גפן", role: "מנהל משאבי אנוש", phone: "052-6789012", email: "gil@gefen.co.il", tags: [retainer] },
-    { name: "לירון כהן", company: "לירון כהן — פרילנס", role: "עצמאית", phone: "054-7890123", email: "liron@lirokohen.co.il", tags: [oneTime] },
+    { name: "שירה אלמוג", company: "סטודיו נוי", role: "מנכ״לית", phone: "050-1234567", email: "shira@studio-noy.co.il", tags: [vip, retainer],
+      taxId: "514872301", city: "תל אביב", address: "הארבעה 12", status: "בטיפול", temperature: "חם", leadType: "ליווי שוטף", source: "המלצה", owner: michal, inquiredAt: daysAgo(14), handedOverAt: daysAgo(13) },
+    { name: "יואב שגיא", company: "דלתא בע״מ", role: "סמנכ״ל תפעול", phone: "052-2345678", email: "yoav@delta.co.il", tags: [oneTime],
+      taxId: "512994417", city: "פתח תקווה", address: "היצירה 5", status: "חדש", temperature: "פושר", leadType: "פרויקט חד-פעמי", source: "אתר", owner: roni, inquiredAt: daysAgo(3), handedOverAt: daysAgo(2) },
+    { name: "אורית לנדאו", company: "קליניקת שיא", role: "בעלים", phone: "054-3456789", email: "orit@shia-clinic.co.il", tags: [retainer],
+      taxId: "038112945", city: "רמת גן", address: "ביאליק 40", billingCity: "תל אביב", billingAddress: "רוטשילד 3", status: "בטיפול", temperature: "חם", leadType: "ליווי שוטף", source: "גוגל", owner: daniel, inquiredAt: daysAgo(21), handedOverAt: daysAgo(20) },
+    { name: "נעם ברקאי", company: "בר יוגב עיצוב", role: "מייסד", phone: "053-4567890", email: "noam@bar-yogev.co.il", tags: [oneTime],
+      taxId: "201338756", city: "חיפה", address: "הנמל 18", status: "ממתין ללקוח", temperature: "פושר", leadType: "ייעוץ נקודתי", source: "פייסבוק", owner: michal, inquiredAt: daysAgo(9), handedOverAt: daysAgo(8) },
+    { name: "דנה אלמוג ושות׳", company: "אלמוג ושות׳", role: "שותפה מנהלת", phone: "050-5678901", email: "dana@almog-law.co.il", tags: [vip, retainer],
+      taxId: "513667201", city: "הרצליה", address: "מדינת היהודים 60", status: "בטיפול", temperature: "חם", leadType: "ליווי שוטף", source: "המלצה", owner: roni, inquiredAt: daysAgo(30), handedOverAt: daysAgo(29) },
+    { name: "גיל גפן", company: "חברת גפן", role: "מנהל משאבי אנוש", phone: "052-6789012", email: "gil@gefen.co.il", tags: [retainer],
+      taxId: "515004429", city: "באר שבע", address: "רגר 90", status: "הומר ללקוח", temperature: "חם", leadType: "הדרכה", source: "כנס", owner: daniel, inquiredAt: daysAgo(60), handedOverAt: daysAgo(58) },
+    { name: "לירון כהן", company: "לירון כהן — פרילנס", role: "עצמאית", phone: "054-7890123", email: "liron@lirokohen.co.il", tags: [oneTime],
+      taxId: "039887210", city: "ירושלים", address: "עמק רפאים 22", status: "הומר ללקוח", temperature: "קר", leadType: "פרויקט חד-פעמי", source: "אתר", owner: michal, inquiredAt: daysAgo(75), handedOverAt: daysAgo(74) },
   ];
 
   const contacts = await Promise.all(
@@ -64,7 +73,18 @@ async function main() {
           role: c.role,
           phone: c.phone,
           email: c.email,
-          source: "ידני",
+          taxId: c.taxId,
+          city: c.city,
+          address: c.address,
+          billingCity: c.billingCity,
+          billingAddress: c.billingAddress,
+          status: c.status,
+          temperature: c.temperature,
+          leadType: c.leadType,
+          source: c.source,
+          ownerId: c.owner.id,
+          inquiredAt: c.inquiredAt,
+          handedOverAt: c.handedOverAt,
           tags: { connect: c.tags.map((t) => ({ id: t.id })) },
         },
       }),

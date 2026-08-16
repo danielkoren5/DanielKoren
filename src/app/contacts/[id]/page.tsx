@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency, tagChipClass } from "@/lib/format";
+import { statusChipClass } from "@/lib/lead-options";
+import { Temperature } from "@/components/Temperature";
 import { addActivity } from "../actions";
 import { IconWhatsapp, IconClock } from "@/components/icons";
 
@@ -20,6 +22,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
     where: { id },
     include: {
       tags: true,
+      owner: true,
       deals: { include: { stage: true }, orderBy: { createdAt: "desc" } },
       activities: { orderBy: { occurredAt: "desc" } },
       tasks: { where: { done: false }, orderBy: { dueAt: "asc" } },
@@ -58,25 +61,63 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               {contact.company}
             </div>
           </div>
-          <div className="ms-auto flex gap-1.5 flex-wrap">
+          <div className="ms-auto flex items-center gap-2 flex-wrap">
+            <span className={statusChipClass(contact.status)}>{contact.status}</span>
+            <Temperature value={contact.temperature} />
             {contact.tags.map((t) => (
               <span key={t.id} className={tagChipClass(t.color)}>
                 {t.name}
               </span>
             ))}
+            <Link href={`/contacts/${contact.id}/edit`} className="btn-secondary">
+              עריכה
+            </Link>
           </div>
         </div>
 
         <div className="flex gap-2.5 flex-wrap text-[12.5px] text-[var(--text-muted)]">
           {contact.phone && <span>📞 {contact.phone}</span>}
           {contact.email && <span>✉ {contact.email}</span>}
-          <span>מקור: {contact.source}</span>
         </div>
 
         <div className="grid grid-cols-3 gap-2.5">
           <Stat n={openValue > 0 ? formatCurrency(openValue) : "—"} l="עסקאות פתוחות" />
           <Stat n={String(contact.activities.length)} l="אינטראקציות רשומות" />
           <Stat n={contact.createdAt.getFullYear().toString()} l="לקוח מאז" />
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        <div className="card p-5">
+          <h3 className="text-[15px] mb-3">ניהול הליד</h3>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <Detail label="סטטוס נוכחי" value={contact.status} />
+            <Detail label="טמפרטורה" value={contact.temperature} />
+            <Detail label="סוג הליד" value={contact.leadType} />
+            <Detail label="מקור הליד" value={contact.source} />
+            <Detail label="אחראי" value={contact.owner?.name} />
+            <Detail label="תאריך פניה" value={formatDay(contact.inquiredAt)} />
+            <Detail label="תאריך העברה" value={formatDay(contact.handedOverAt)} />
+          </dl>
+        </div>
+
+        <div className="card p-5">
+          <h3 className="text-[15px] mb-3">פרטים לחשבונית</h3>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <Detail label="ח.פ. / ע.מ." value={contact.taxId} />
+            <Detail label="עיר" value={contact.city} />
+            <Detail label="כתובת" value={contact.address} className="col-span-2" />
+            <Detail
+              label="כתובת לחשבונית"
+              value={
+                contact.billingAddress || contact.billingCity
+                  ? [contact.billingAddress, contact.billingCity].filter(Boolean).join(", ")
+                  : null
+              }
+              hint={!contact.billingAddress && !contact.billingCity ? "זהה לכתובת" : undefined}
+              className="col-span-2"
+            />
+          </dl>
         </div>
       </section>
 
@@ -173,4 +214,29 @@ function Stat({ n, l }: { n: string; l: string }) {
       <div className="text-[11px] text-[var(--text-faint)] mt-0.5">{l}</div>
     </div>
   );
+}
+
+function Detail({
+  label,
+  value,
+  hint,
+  className = "",
+}: {
+  label: string;
+  value?: string | null;
+  hint?: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <dt className="text-[11px] text-[var(--text-faint)]">{label}</dt>
+      <dd className="text-[13px] m-0 mt-0.5">
+        {value ?? <span className="text-[var(--text-faint)]">{hint ?? "—"}</span>}
+      </dd>
+    </div>
+  );
+}
+
+function formatDay(date: Date | null) {
+  return date ? date.toLocaleDateString("he-IL") : null;
 }
