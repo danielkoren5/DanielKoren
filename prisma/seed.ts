@@ -1,15 +1,7 @@
 import { PrismaClient } from "../src/generated/prisma";
+import { DEFAULT_STAGES } from "../src/lib/default-stages";
 
 const prisma = new PrismaClient();
-
-const STAGES = [
-  { name: "ליד חדש", order: 1 },
-  { name: "שיחת אבחון", order: 2 },
-  { name: "הצעת שירות", order: 3 },
-  { name: "חוזה נחתם", order: 4 },
-  { name: "ליווי פעיל", order: 5 },
-  { name: "הסתיים / חידוש", order: 6, isWon: true },
-];
 
 async function main() {
   await prisma.task.deleteMany();
@@ -26,7 +18,7 @@ async function main() {
   });
 
   const stages = await Promise.all(
-    STAGES.map((s) =>
+    DEFAULT_STAGES.map((s) =>
       prisma.stage.create({
         data: { ...s, tenantId: tenant.id },
       }),
