@@ -1,0 +1,163 @@
+// Prisma schema for "מוקד" (Moked) — CRM MVP
+// Every model carries tenantId even though this deployment runs a single
+// tenant today: it keeps a future move to multi-tenant SaaS a data
+// migration, not a schema rewrite.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users     User[]
+  stages    Stage[]
+  contacts  Contact[]
+  tags      Tag[]
+  deals     Deal[]
+  activities Activity[]
+  tasks     Task[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  name      String
+  email     String   @unique
+  initials  String
+  createdAt DateTime @default(now())
+
+  dealsOwned Deal[] @relation("DealOwner")
+  tasks      Task[] @relation("TaskAssignee")
+
+  @@index([tenantId])
+}
+
+/// Pipeline stage, seeded per tenant so wording/order can be tailored
+/// to the business (here: a consulting engagement lifecycle).
+model Stage {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  name     String
+  order    Int
+  isWon    Boolean @default(false)
+  isLost   Boolean @default(false)
+
+  deals Deal[]
+
+  @@unique([tenantId, order])
+  @@index([tenantId])
+}
+
+model Contact {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  name       String
+  company    String?
+  role       String?
+  phone      String?
+  email      String?
+  /// Where this contact came from: "ידני", "LeadMeCMS", "CSV" ...
+  source     String   @default("ידני")
+  /// ID in the source system, used to de-duplicate on re-import.
+  externalId String?
+  createdAt  DateTime @default(now())
+
+  tags       Tag[]
+  deals      Deal[]
+  activities Activity[]
+  tasks      Task[]
+
+  @@index([tenantId])
+}
+
+model Tag {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  name     String
+  /// One of the design system's semantic chip colors: gold | violet | teal | neutral
+  color    String @default("neutral")
+
+  contacts Contact[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+model Deal {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  title           String
+  /// Value in whole ₪ (no agorot) — fine at MVP scale.
+  value           Int
+  contactId       String
+  contact         Contact   @relation(fields: [contactId], references: [id])
+  stageId         String
+  stage           Stage     @relation(fields: [stageId], references: [id])
+  ownerId         String?
+  owner           User?     @relation("DealOwner", fields: [ownerId], references: [id])
+  /// "חד-פעמי" | "ריטיינר חודשי"
+  engagementType  String?
+  expectedCloseAt DateTime?
+  closedAt        DateTime?
+  stageEnteredAt  DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  activities Activity[]
+  tasks      Task[]
+
+  @@index([tenantId])
+  @@index([stageId])
+}
+
+/// Timeline entry on a contact and/or deal — call, WhatsApp message,
+/// email, meeting, note, or an automatic stage-change record.
+model Activity {
+  id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  contactId  String?
+  contact    Contact?  @relation(fields: [contactId], references: [id])
+  dealId     String?
+  deal       Deal?     @relation(fields: [dealId], references: [id])
+  type       String
+  summary    String
+  occurredAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([contactId])
+  @@index([dealId])
+}
+
+model Task {
+  id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  title      String
+  dueAt      DateTime?
+  done       Boolean   @default(false)
+  assigneeId String?
+  assignee   User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  contactId  String?
+  contact    Contact?  @relation(fields: [contactId], references: [id])
+  dealId     String?
+  deal       Deal?     @relation(fields: [dealId], references: [id])
+  createdAt  DateTime  @default(now())
+
+  @@index([tenantId])
+}
