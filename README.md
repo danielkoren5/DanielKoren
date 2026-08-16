@@ -14,9 +14,10 @@ WhatsApp ואינטגרציות חיוב/הנהלת חשבונות — ראו "�
 ## הפעלה מקומית
 
 ```bash
+cp .env.example .env   # פעם ראשונה בלבד — .env לא נשמר ב-git בכוונה
 npm install
-npm run db:seed   # יוצר DB, מריץ מיגרציות, וזורע נתוני דוגמה
-npm run dev        # http://localhost:3000
+npm run db:seed         # יוצר DB, מריץ מיגרציות, וזורע נתוני דוגמה
+npm run dev              # http://localhost:3000
 ```
 
 לאיפוס הנתונים בכל שלב: `npm run db:seed` (מוחק ומזרע מחדש).
